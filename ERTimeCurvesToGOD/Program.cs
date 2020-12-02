@@ -54,11 +54,15 @@ namespace ERTimeCurvesToGOD
                     Console.ReadKey();
                 }
             }
+
             Console.WriteLine($"Reading {file}...");
+            if (!text.Contains('\t'))
+                ExitWithMessage($"File {file} is wrong.");
+
             if (text.Contains("SOU_X:REC_X"))
             {
                 text = text.Replace("SOU_X:REC_X\r\n", "");
-				text = text.Substring(1, text.Length - 1);
+                text = text.Substring(1, text.Length - 1);
                 text = text.Replace("\r\n\t", "\r\n");
                 text = text.Replace(":\t", "\t");
             }
@@ -113,14 +117,14 @@ namespace ERTimeCurvesToGOD
             if (ChangeHodAndWrite(Path.Combine(path, file), souX, hod))
                 fileNames.Add(file);
 
+            if (fileNames.Count == 0)
+                ExitWithMessage("No files were created.");
+
             if (WriteInputFile(Path.Combine(path, "i.txt"), fileNames))
                 fileNames.Add("i.txt");
 
             if (CreateReliefFile(Path.Combine(path, "r.txt")))
                 fileNames.Add("r.txt");
-
-            if (fileNames.Count == 0)
-                ExitWithMessage("No files were created.");
 
             Console.WriteLine("SUCCESS! Created:");
             Console.WriteLine(string.Join('\n', fileNames));
@@ -145,16 +149,18 @@ namespace ERTimeCurvesToGOD
         {
             if (hod.Count == 0)
                 return false;
+            try
+            {
+                var textToDelete = $"{souX} ";
+                int firstOcur = hod[0].IndexOf(souX);
+                hod[0] = hod[0].Substring(firstOcur + textToDelete.Length, hod[0].Length - firstOcur - textToDelete.Length);
 
-            var textToDelete = $"{souX} ";
-            int firstOcur = hod[0].IndexOf(souX);
-            hod[0] = hod[0].Substring(firstOcur + textToDelete.Length, hod[0].Length - firstOcur - textToDelete.Length);
+                var text = string.Join('\n', hod);
+                text = text.Replace($"\r\n{souX} ", "\r\n");
+                text = $"{souX}\r\n{souX}\r\n{text.Substring(0, text.Length - 1)}";
 
-            var text = string.Join('\n', hod);
-            text = text.Replace($"\r\n{souX} ", "\r\n");
-            text = $"{souX}\r\n{souX}\r\n{text.Substring(0, text.Length - 1)}";
-
-            try { File.WriteAllText(path, text); }
+                File.WriteAllText(path, text);
+            }
             catch { Console.WriteLine($"File {path} - Error"); return false; }
 
             return true;
